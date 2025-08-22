@@ -65,6 +65,7 @@ export default function Home() {
   const [summary, setSummary] = useState('');
   const [quiz, setQuiz] = useState<Quiz[]>([]);
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
+  const [activeTab, setActiveTab] = useState('home');
 
   // Quiz State
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -111,6 +112,7 @@ export default function Home() {
       setQuiz(quizResult.quizQuestions);
       setFlashcards(flashcardsResult.flashcards);
       setIsGenerated(true);
+      setActiveTab('study');
     } catch (error) {
       console.error(error);
       toast({
@@ -193,7 +195,7 @@ export default function Home() {
       </header>
 
       <main className="flex-1 p-6">
-        <Tabs defaultValue="home" className="w-full flex-grow flex flex-col">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-grow flex flex-col">
           <TabsList className="grid w-full grid-cols-3 mb-6">
             <TabsTrigger value="home">
               <LayoutDashboard className="mr-2 h-4 w-4" />
@@ -714,5 +716,3 @@ const Faq = () => (
     </CardContent>
   </Card>
 );
-
-    
