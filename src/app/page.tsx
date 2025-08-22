@@ -9,6 +9,9 @@ import {
   Sparkles,
   HelpCircle,
   BrainCircuit,
+  LayoutDashboard,
+  GraduationCap,
+  Library,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -58,6 +61,7 @@ export default function Home() {
   const { toast } = useToast();
   const [studyContent, setStudyContent] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isGenerated, setIsGenerated] = useState(false);
   const [summary, setSummary] = useState('');
   const [quiz, setQuiz] = useState<Quiz[]>([]);
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
@@ -85,6 +89,7 @@ export default function Home() {
       return;
     }
     setIsLoading(true);
+    setIsGenerated(false);
     // Reset states
     setSummary('');
     setQuiz([]);
@@ -94,6 +99,7 @@ export default function Home() {
     setIsAnswerSubmitted(false);
     setScore(0);
     setReviewedFlashcards(new Set());
+    setMotivationalTip('');
 
     try {
       const [summaryResult, quizResult, flashcardsResult] = await Promise.all([
@@ -104,6 +110,7 @@ export default function Home() {
       setSummary(summaryResult.summary);
       setQuiz(quizResult.quizQuestions);
       setFlashcards(flashcardsResult.flashcards);
+      setIsGenerated(true);
     } catch (error) {
       console.error(error);
       toast({
@@ -185,103 +192,212 @@ export default function Home() {
         <h1 className="text-2xl font-bold tracking-tight">StudyGenie</h1>
       </header>
 
-      <main className="flex-1 grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-6">
-        {/* Left Column */}
-        <div className="lg:col-span-1 xl:col-span-1 flex flex-col gap-6">
-          <Card className="flex-grow flex flex-col">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-accent" />
-                <span>Start Studying</span>
-              </CardTitle>
-              <CardDescription>
-                Paste your study material below to generate a summary, quiz, and flashcards.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex-grow flex flex-col gap-4">
-              <Textarea
-                placeholder="Paste your notes, article, or any text here..."
-                className="w-full flex-grow min-h-[200px] text-base"
-                value={studyContent}
-                onChange={e => setStudyContent(e.target.value)}
-                disabled={isLoading}
-              />
-              <Button onClick={handleGenerate} disabled={isLoading} className="w-full">
-                {isLoading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Sparkles className="mr-2 h-4 w-4" />
-                )}
-                Generate
-              </Button>
-            </CardContent>
-          </Card>
+      <main className="flex-1 p-6">
+        <Tabs defaultValue="home" className="w-full flex-grow flex flex-col">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsTrigger value="home">
+              <LayoutDashboard className="mr-2 h-4 w-4" />
+              Home
+            </TabsTrigger>
+            <TabsTrigger value="study" disabled={!isGenerated}>
+              <GraduationCap className="mr-2 h-4 w-4" />
+              Study
+            </TabsTrigger>
+            <TabsTrigger value="resources">
+              <Library className="mr-2 h-4 w-4" />
+              Resources
+            </TabsTrigger>
+          </TabsList>
 
-          <MotivationStation
-            studyHabit={studyHabit}
-            setStudyHabit={setStudyHabit}
-            motivationalTip={motivationalTip}
-            handleGenerateTip={handleGenerateTip}
-          />
-
-          <Faq />
-        </div>
-
-        {/* Right Column */}
-        <div className="lg:col-span-2 xl:col-span-3 flex flex-col gap-6">
-          <ProgressTracker progressData={progressData} />
-
-          <Tabs defaultValue="summary" className="w-full flex-grow flex flex-col">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="summary">
-                <BookOpen className="mr-2 h-4 w-4" />
-                Summary
-              </TabsTrigger>
-              <TabsTrigger value="flashcards">
-                <ClipboardCheck className="mr-2 h-4 w-4" />
-                Flashcards
-              </TabsTrigger>
-              <TabsTrigger value="quiz">
-                <HelpCircle className="mr-2 h-4 w-4" />
-                Quiz
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="summary" className="flex-grow mt-4">
-              <SummaryDisplay summary={summary} isLoading={isLoading} />
-            </TabsContent>
-
-            <TabsContent value="flashcards" className="flex-grow mt-4">
-              <FlashcardDisplay
-                flashcards={flashcards}
-                isLoading={isLoading}
-                reviewedFlashcards={reviewedFlashcards}
-                setReviewedFlashcards={setReviewedFlashcards}
-              />
-            </TabsContent>
-
-            <TabsContent value="quiz" className="flex-grow mt-4">
-              <QuizDisplay
-                quiz={quiz}
-                isLoading={isLoading}
-                currentQuestionIndex={currentQuestionIndex}
-                selectedAnswer={selectedAnswer}
-                setSelectedAnswer={setSelectedAnswer}
-                isAnswerSubmitted={isAnswerSubmitted}
-                handleQuizSubmit={handleQuizSubmit}
-                handleNextQuestion={handleNextQuestion}
-                resetQuiz={resetQuiz}
-                score={score}
-              />
-            </TabsContent>
-          </Tabs>
-        </div>
+          <TabsContent value="home">
+            <HomeTab
+              studyContent={studyContent}
+              setStudyContent={setStudyContent}
+              isLoading={isLoading}
+              handleGenerate={handleGenerate}
+              isGenerated={isGenerated}
+              progressData={progressData}
+            />
+          </TabsContent>
+          <TabsContent value="study" className="flex-grow mt-4">
+            <StudyTab
+              summary={summary}
+              isLoading={isLoading}
+              flashcards={flashcards}
+              reviewedFlashcards={reviewedFlashcards}
+              setReviewedFlashcards={setReviewedFlashcards}
+              quiz={quiz}
+              currentQuestionIndex={currentQuestionIndex}
+              selectedAnswer={selectedAnswer}
+              setSelectedAnswer={setSelectedAnswer}
+              isAnswerSubmitted={isAnswerSubmitted}
+              handleQuizSubmit={handleQuizSubmit}
+              handleNextQuestion={handleNextQuestion}
+              resetQuiz={resetQuiz}
+              score={score}
+            />
+          </TabsContent>
+          <TabsContent value="resources">
+            <ResourcesTab
+              studyHabit={studyHabit}
+              setStudyHabit={setStudyHabit}
+              motivationalTip={motivationalTip}
+              handleGenerateTip={handleGenerateTip}
+            />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
 }
 
-// Sub-components for clarity
+const HomeTab = ({
+  studyContent,
+  setStudyContent,
+  isLoading,
+  handleGenerate,
+  isGenerated,
+  progressData,
+}: {
+  studyContent: string;
+  setStudyContent: (value: string) => void;
+  isLoading: boolean;
+  handleGenerate: () => void;
+  isGenerated: boolean;
+  progressData: any[];
+}) => (
+  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <Card className="flex-grow flex flex-col">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Sparkles className="h-5 w-5 text-accent" />
+          <span>Start Studying</span>
+        </CardTitle>
+        <CardDescription>
+          Paste your study material below to generate a summary, quiz, and flashcards.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex-grow flex flex-col gap-4">
+        <Textarea
+          placeholder="Paste your notes, article, or any text here..."
+          className="w-full flex-grow min-h-[200px] text-base"
+          value={studyContent}
+          onChange={e => setStudyContent(e.target.value)}
+          disabled={isLoading}
+        />
+        <Button onClick={handleGenerate} disabled={isLoading} className="w-full">
+          {isLoading ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Sparkles className="mr-2 h-4 w-4" />
+          )}
+          Generate
+        </Button>
+      </CardContent>
+    </Card>
+    {isGenerated && <ProgressTracker progressData={progressData} />}
+  </div>
+);
+
+const StudyTab = ({
+  summary,
+  isLoading,
+  flashcards,
+  reviewedFlashcards,
+  setReviewedFlashcards,
+  quiz,
+  currentQuestionIndex,
+  selectedAnswer,
+  setSelectedAnswer,
+  isAnswerSubmitted,
+  handleQuizSubmit,
+  handleNextQuestion,
+  resetQuiz,
+  score,
+}: {
+  summary: string;
+  isLoading: boolean;
+  flashcards: Flashcard[];
+  reviewedFlashcards: Set<number>;
+  setReviewedFlashcards: React.Dispatch<React.SetStateAction<Set<number>>>;
+  quiz: Quiz[];
+  currentQuestionIndex: number;
+  selectedAnswer: string | null;
+  setSelectedAnswer: (answer: string) => void;
+  isAnswerSubmitted: boolean;
+  handleQuizSubmit: () => void;
+  handleNextQuestion: () => void;
+  resetQuiz: () => void;
+  score: number;
+}) => (
+  <Tabs defaultValue="summary" className="w-full flex-grow flex flex-col">
+    <TabsList className="grid w-full grid-cols-3">
+      <TabsTrigger value="summary">
+        <BookOpen className="mr-2 h-4 w-4" />
+        Summary
+      </TabsTrigger>
+      <TabsTrigger value="flashcards">
+        <ClipboardCheck className="mr-2 h-4 w-4" />
+        Flashcards
+      </TabsTrigger>
+      <TabsTrigger value="quiz">
+        <HelpCircle className="mr-2 h-4 w-4" />
+        Quiz
+      </TabsTrigger>
+    </TabsList>
+
+    <TabsContent value="summary" className="flex-grow mt-4">
+      <SummaryDisplay summary={summary} isLoading={isLoading} />
+    </TabsContent>
+
+    <TabsContent value="flashcards" className="flex-grow mt-4">
+      <FlashcardDisplay
+        flashcards={flashcards}
+        isLoading={isLoading}
+        reviewedFlashcards={reviewedFlashcards}
+        setReviewedFlashcards={setReviewedFlashcards}
+      />
+    </TabsContent>
+
+    <TabsContent value="quiz" className="flex-grow mt-4">
+      <QuizDisplay
+        quiz={quiz}
+        isLoading={isLoading}
+        currentQuestionIndex={currentQuestionIndex}
+        selectedAnswer={selectedAnswer}
+        setSelectedAnswer={setSelectedAnswer}
+        isAnswerSubmitted={isAnswerSubmitted}
+        handleQuizSubmit={handleQuizSubmit}
+        handleNextQuestion={handleNextQuestion}
+        resetQuiz={resetQuiz}
+        score={score}
+      />
+    </TabsContent>
+  </Tabs>
+);
+
+const ResourcesTab = ({
+  studyHabit,
+  setStudyHabit,
+  motivationalTip,
+  handleGenerateTip,
+}: {
+  studyHabit: string;
+  setStudyHabit: (habit: string) => void;
+  motivationalTip: string;
+  handleGenerateTip: () => void;
+}) => (
+  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <MotivationStation
+      studyHabit={studyHabit}
+      setStudyHabit={setStudyHabit}
+      motivationalTip={motivationalTip}
+      handleGenerateTip={handleGenerateTip}
+    />
+    <Faq />
+  </div>
+);
+
 
 const SummaryDisplay = ({ summary, isLoading }: { summary: string; isLoading: boolean }) => (
   <Card className="h-full min-h-[400px]">
@@ -503,7 +619,7 @@ const ProgressTracker = ({ progressData }: { progressData: any[] }) => (
       <CardTitle>Your Progress</CardTitle>
       <CardDescription>Complete quizzes and review flashcards to see your progress.</CardDescription>
     </CardHeader>
-    <CardContent className="h-[120px] pt-2">
+    <CardContent className="h-[240px] pt-2">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={progressData} layout="vertical" margin={{ left: 10, right: 40 }}>
           <XAxis type="number" domain={[0, 100]} hide />
@@ -598,3 +714,5 @@ const Faq = () => (
     </CardContent>
   </Card>
 );
+
+    
