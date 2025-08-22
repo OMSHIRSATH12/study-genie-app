@@ -1,59 +1,50 @@
-# Firebase Studio
-
-This is a NextJS starter in Firebase Studio.
-
-To get started, take a look at src/app/page.tsx.
+# StudyGenie 🧞  
+**An AI-powered study assistant that transforms your notes and topics into interactive learning materials.**
 
 ---
 
-## How to Push This Project to GitHub
+## 🚀 Core Features
 
-This guide provides the steps to publish this project to a new repository on your GitHub account.
+- **AI Content Generation**  
+  Provide just a topic title (e.g., _"The Roman Empire"_) and StudyGenie will generate a comprehensive, readable summary.
 
-### Prerequisites
+- **Content Summarization**  
+  Paste your study notes or upload a text file—StudyGenie will condense it into key takeaways and highlights.
 
-1.  **A GitHub Account:** If you don't have one, sign up for free at [github.com](https://github.com).
-2.  **A Terminal/Command Line:** You will need to run these commands in a terminal. Most development environments have a built-in terminal. If you download the project to your computer, you can use the Terminal app on macOS or Command Prompt/PowerShell on Windows.
+- **Interactive Quizzes**  
+  Automatically generates multiple-choice quizzes based on your study material. Your score is tracked as you go.
 
-### Step 1: Create a New, Empty Repository on GitHub
+- **Flippable Flashcards**  
+  Instantly creates digital flashcards with terms/questions on the front and answers on the back—great for memorization.
 
-1.  Go to your GitHub account.
-2.  Click the **+** icon in the top-right corner and select **New repository**.
-3.  Give your repository a name (e.g., `study-genie-app`).
-4.  **Important:** Leave all the "Initialize this repository with:" options **unchecked**. You want an empty repository to push your existing files into.
-5.  Click **Create repository**.
+- **Personalized Motivational Tips**  
+  Choose your study habits (like _“I tend to procrastinate”_) and receive tailored motivational tips from an AI coach.
 
-### Step 2: Run Commands in Your Project's Terminal
+- **Progress Tracking**  
+  Monitor your learning progress through your profile page, which displays quiz results and flashcard review history for each topic.
 
-Open a terminal and navigate to this project's main folder. Then, run the following commands one by one.
+---
 
-1.  **Initialize Git:** This sets up a new Git repository in your project folder.
-    ```bash
-    git init -b main
-    ```
+## 🛠️ Tech Stack
 
-2.  **Add all files for tracking:** This stages all your files for the first commit. Your `.gitignore` file will ensure your API key in the `.env` file is kept private.
-    ```bash
-    git add .
-    ```
+- **Frontend Framework:** Next.js (App Router)
+- **Language:** TypeScript
+- **UI Library:** React + ShadCN UI
+- **Styling:** Tailwind CSS  
+- **AI Integration:** Google Gemini (via prompt engineering)
+- **Backend / Services:** Firebase Studio (for functions, storage, auth, and database)
 
-3.  **Commit your files:** This saves a snapshot of your project.
-    ```bash
-    git commit -m "Initial commit"
-    ```
+---
 
-4.  **Link your project to GitHub:** **You must replace `your-username` and `your-repo-name`** with your actual GitHub username and the repository name you created in Step 1.
-    ```bash
-    git remote add origin https://github.com/your-username/your-repo-name.git
-    ```
-    *For example, if your username is `OMSHIRSATH12` and your repo is named `study-genie-app`, the command would be:*
-    ```bash
-    git remote add origin https://github.com/OMSHIRSATH12/study-genie-app.git
-    ```
+## ⚙️ How to Use
 
-5.  **Push your code to GitHub:** This uploads your project.
-    ```bash
-    git push -u origin main
-    ```
+1. **Enter a Topic** – Type in a subject or concept you'd like to study.
+2. **Or Paste Your Notes** – Alternatively, paste your existing study material or upload a text file.
+3. **Click "Generate"** – Let StudyGenie create summaries, quizzes, flashcards, and tips tailored to your learning needs.
 
-After the last command, your project will be visible on your GitHub repository.
+---
+
+Make studying more **effective**, **personalized**, and **fun** with StudyGenie! 💡📚
+
+
+
