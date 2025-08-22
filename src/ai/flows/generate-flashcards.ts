@@ -58,6 +58,18 @@ const prompt = ai.definePrompt({
 
   Return the flashcards as a JSON array of objects, where each object has a front and back property.
 `,
+   config: {
+    safetySettings: [
+      {
+        category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+        threshold: 'BLOCK_NONE',
+      },
+       {
+        category: 'HARM_CATEGORY_HATE_SPEECH',
+        threshold: 'BLOCK_ONLY_HIGH',
+      },
+    ],
+  },
 });
 
 const generateFlashcardsFlow = ai.defineFlow(
@@ -71,5 +83,3 @@ const generateFlashcardsFlow = ai.defineFlow(
     return output!;
   }
 );
-
-    

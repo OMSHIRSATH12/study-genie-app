@@ -54,6 +54,18 @@ Number of Questions: {{{numberOfQuestions}}}
 
 Format your output as a JSON object with a "quizQuestions" field containing an array of question objects. Each question object should have the fields "question", "options" (an array of 4 strings), and "correctAnswer" (a string from the options array).
 `,
+  config: {
+    safetySettings: [
+      {
+        category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+        threshold: 'BLOCK_NONE',
+      },
+       {
+        category: 'HARM_CATEGORY_HATE_SPEECH',
+        threshold: 'BLOCK_ONLY_HIGH',
+      },
+    ],
+  },
 });
 
 const generateQuizFlow = ai.defineFlow(
@@ -67,5 +79,3 @@ const generateQuizFlow = ai.defineFlow(
     return output!;
   }
 );
-
-    
