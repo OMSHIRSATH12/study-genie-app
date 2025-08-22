@@ -65,7 +65,6 @@ export default function Home() {
   const [summary, setSummary] = useState('');
   const [quiz, setQuiz] = useState<Quiz[]>([]);
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
-  const [activeTab, setActiveTab] = useState('home');
 
   // Quiz State
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -112,7 +111,6 @@ export default function Home() {
       setQuiz(quizResult.quizQuestions);
       setFlashcards(flashcardsResult.flashcards);
       setIsGenerated(true);
-      setActiveTab('study');
     } catch (error) {
       console.error(error);
       toast({
@@ -186,68 +184,103 @@ export default function Home() {
     ],
     [score, quiz.length, reviewedFlashcards.size, flashcards.length]
   );
+  
+  const [activeSection, setActiveSection] = useState('input');
 
-  return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <header className="flex items-center gap-4 p-6 border-b">
-        <BrainCircuit className="h-8 w-8 text-primary" />
-        <h1 className="text-2xl font-bold tracking-tight">StudyGenie</h1>
-      </header>
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+        <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-64">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+          <p>Generating your study materials...</p>
+        </div>
+      );
+    }
 
-      <main className="flex-1 p-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-grow flex flex-col">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
-            <TabsTrigger value="home">
-              <LayoutDashboard className="mr-2 h-4 w-4" />
-              Home
-            </TabsTrigger>
-            <TabsTrigger value="study" disabled={!isGenerated}>
-              <GraduationCap className="mr-2 h-4 w-4" />
-              Study
-            </TabsTrigger>
-            <TabsTrigger value="resources">
-              <Library className="mr-2 h-4 w-4" />
-              Resources
-            </TabsTrigger>
-          </TabsList>
+    if (!isGenerated) {
+      return (
+        <HomeTab
+          studyContent={studyContent}
+          setStudyContent={setStudyContent}
+          isLoading={isLoading}
+          handleGenerate={handleGenerate}
+        />
+      );
+    }
 
-          <TabsContent value="home">
-            <HomeTab
-              studyContent={studyContent}
-              setStudyContent={setStudyContent}
-              isLoading={isLoading}
-              handleGenerate={handleGenerate}
-              isGenerated={isGenerated}
-              progressData={progressData}
-            />
-          </TabsContent>
-          <TabsContent value="study" className="flex-grow mt-4">
-            <StudyTab
-              summary={summary}
-              isLoading={isLoading}
-              flashcards={flashcards}
-              reviewedFlashcards={reviewedFlashcards}
-              setReviewedFlashcards={setReviewedFlashcards}
-              quiz={quiz}
-              currentQuestionIndex={currentQuestionIndex}
-              selectedAnswer={selectedAnswer}
-              setSelectedAnswer={setSelectedAnswer}
-              isAnswerSubmitted={isAnswerSubmitted}
-              handleQuizSubmit={handleQuizSubmit}
-              handleNextQuestion={handleNextQuestion}
-              resetQuiz={resetQuiz}
-              score={score}
-            />
-          </TabsContent>
-          <TabsContent value="resources">
-            <ResourcesTab
+    switch (activeSection) {
+      case 'summary':
+        return <SummaryDisplay summary={summary} isLoading={isLoading} />;
+      case 'flashcards':
+        return (
+          <FlashcardDisplay
+            flashcards={flashcards}
+            isLoading={isLoading}
+            reviewedFlashcards={reviewedFlashcards}
+            setReviewedFlashcards={setReviewedFlashcards}
+          />
+        );
+      case 'quiz':
+        return (
+          <QuizDisplay
+            quiz={quiz}
+            isLoading={isLoading}
+            currentQuestionIndex={currentQuestionIndex}
+            selectedAnswer={selectedAnswer}
+            setSelectedAnswer={setSelectedAnswer}
+            isAnswerSubmitted={isAnswerSubmitted}
+            handleQuizSubmit={handleQuizSubmit}
+            handleNextQuestion={handleNextQuestion}
+            resetQuiz={resetQuiz}
+            score={score}
+          />
+        );
+      case 'resources':
+        return (
+           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <MotivationStation
               studyHabit={studyHabit}
               setStudyHabit={setStudyHabit}
               motivationalTip={motivationalTip}
               handleGenerateTip={handleGenerateTip}
             />
-          </TabsContent>
-        </Tabs>
+            <Faq />
+          </div>
+        );
+      case 'progress':
+          return <ProgressTracker progressData={progressData} />
+      default:
+        return (
+          <HomeTab
+            studyContent={studyContent}
+            setStudyContent={setStudyContent}
+            isLoading={isLoading}
+            handleGenerate={handleGenerate}
+          />
+        );
+    }
+  };
+
+
+  return (
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
+      <header className="flex items-center justify-between gap-4 p-6 border-b">
+        <div className="flex items-center gap-4">
+            <BrainCircuit className="h-8 w-8 text-primary" />
+            <h1 className="text-2xl font-bold tracking-tight">StudyGenie</h1>
+        </div>
+        {isGenerated && (
+            <div className="flex items-center gap-2">
+                <Button variant={activeSection === 'summary' ? 'default' : 'ghost'} onClick={() => setActiveSection('summary')}>Summary</Button>
+                <Button variant={activeSection === 'flashcards' ? 'default' : 'ghost'} onClick={() => setActiveSection('flashcards')}>Flashcards</Button>
+                <Button variant={activeSection === 'quiz' ? 'default' : 'ghost'} onClick={() => setActiveSection('quiz')}>Quiz</Button>
+                <Button variant={activeSection === 'resources' ? 'default' : 'ghost'} onClick={() => setActiveSection('resources')}>Resources</Button>
+                <Button variant={activeSection === 'progress' ? 'default' : 'ghost'} onClick={() => setActiveSection('progress')}>Progress</Button>
+            </div>
+        )}
+      </header>
+      <main className="flex-1 p-6">
+       {renderContent()}
       </main>
     </div>
   );
@@ -257,18 +290,14 @@ const HomeTab = ({
   studyContent,
   setStudyContent,
   isLoading,
-  handleGenerate,
-  isGenerated,
-  progressData,
+  handleGenerate
 }: {
   studyContent: string;
   setStudyContent: (value: string) => void;
   isLoading: boolean;
   handleGenerate: () => void;
-  isGenerated: boolean;
-  progressData: any[];
 }) => (
-  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
     <Card className="flex-grow flex flex-col">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
@@ -297,109 +326,8 @@ const HomeTab = ({
         </Button>
       </CardContent>
     </Card>
-    {isGenerated && <ProgressTracker progressData={progressData} />}
   </div>
 );
-
-const StudyTab = ({
-  summary,
-  isLoading,
-  flashcards,
-  reviewedFlashcards,
-  setReviewedFlashcards,
-  quiz,
-  currentQuestionIndex,
-  selectedAnswer,
-  setSelectedAnswer,
-  isAnswerSubmitted,
-  handleQuizSubmit,
-  handleNextQuestion,
-  resetQuiz,
-  score,
-}: {
-  summary: string;
-  isLoading: boolean;
-  flashcards: Flashcard[];
-  reviewedFlashcards: Set<number>;
-  setReviewedFlashcards: React.Dispatch<React.SetStateAction<Set<number>>>;
-  quiz: Quiz[];
-  currentQuestionIndex: number;
-  selectedAnswer: string | null;
-  setSelectedAnswer: (answer: string) => void;
-  isAnswerSubmitted: boolean;
-  handleQuizSubmit: () => void;
-  handleNextQuestion: () => void;
-  resetQuiz: () => void;
-  score: number;
-}) => (
-  <Tabs defaultValue="summary" className="w-full flex-grow flex flex-col">
-    <TabsList className="grid w-full grid-cols-3">
-      <TabsTrigger value="summary">
-        <BookOpen className="mr-2 h-4 w-4" />
-        Summary
-      </TabsTrigger>
-      <TabsTrigger value="flashcards">
-        <ClipboardCheck className="mr-2 h-4 w-4" />
-        Flashcards
-      </TabsTrigger>
-      <TabsTrigger value="quiz">
-        <HelpCircle className="mr-2 h-4 w-4" />
-        Quiz
-      </TabsTrigger>
-    </TabsList>
-
-    <TabsContent value="summary" className="flex-grow mt-4">
-      <SummaryDisplay summary={summary} isLoading={isLoading} />
-    </TabsContent>
-
-    <TabsContent value="flashcards" className="flex-grow mt-4">
-      <FlashcardDisplay
-        flashcards={flashcards}
-        isLoading={isLoading}
-        reviewedFlashcards={reviewedFlashcards}
-        setReviewedFlashcards={setReviewedFlashcards}
-      />
-    </TabsContent>
-
-    <TabsContent value="quiz" className="flex-grow mt-4">
-      <QuizDisplay
-        quiz={quiz}
-        isLoading={isLoading}
-        currentQuestionIndex={currentQuestionIndex}
-        selectedAnswer={selectedAnswer}
-        setSelectedAnswer={setSelectedAnswer}
-        isAnswerSubmitted={isAnswerSubmitted}
-        handleQuizSubmit={handleQuizSubmit}
-        handleNextQuestion={handleNextQuestion}
-        resetQuiz={resetQuiz}
-        score={score}
-      />
-    </TabsContent>
-  </Tabs>
-);
-
-const ResourcesTab = ({
-  studyHabit,
-  setStudyHabit,
-  motivationalTip,
-  handleGenerateTip,
-}: {
-  studyHabit: string;
-  setStudyHabit: (habit: string) => void;
-  motivationalTip: string;
-  handleGenerateTip: () => void;
-}) => (
-  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <MotivationStation
-      studyHabit={studyHabit}
-      setStudyHabit={setStudyHabit}
-      motivationalTip={motivationalTip}
-      handleGenerateTip={handleGenerateTip}
-    />
-    <Faq />
-  </div>
-);
-
 
 const SummaryDisplay = ({ summary, isLoading }: { summary: string; isLoading: boolean }) => (
   <Card className="h-full min-h-[400px]">
@@ -583,7 +511,7 @@ const QuizDisplay = ({
         <p className="font-semibold text-lg">{currentQuestion.question}</p>
         <RadioGroup
           value={selectedAnswer || ''}
-          onValueChange={setSelectedAnswer}
+          onValue-change={setSelectedAnswer}
           disabled={isAnswerSubmitted}
           className="space-y-2"
         >
@@ -688,7 +616,7 @@ const Faq = () => (
     <CardHeader>
       <CardTitle className="flex items-center gap-2">
         <HelpCircle className="h-5 w-5 text-accent" />
-        <span>Study Q&A</span>
+        <span>Study Q&amp;A</span>
       </CardTitle>
       <CardDescription>Answers to common questions.</CardDescription>
     </CardHeader>
@@ -716,3 +644,5 @@ const Faq = () => (
     </CardContent>
   </Card>
 );
+
+    
