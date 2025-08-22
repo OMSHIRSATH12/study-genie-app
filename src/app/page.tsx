@@ -196,7 +196,7 @@ export default function Home() {
       <main className="flex-1 p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 mb-6">
-            <TabsTrigger value="home" onClick={() => setActiveTab('home')}>Home</TabsTrigger>
+            <TabsTrigger value="home">Home</TabsTrigger>
             <TabsTrigger value="summary" disabled={!isGenerated}>Summary</TabsTrigger>
             <TabsTrigger value="flashcards" disabled={!isGenerated}>Flashcards</TabsTrigger>
             <TabsTrigger value="quiz" disabled={!isGenerated}>Quiz</TabsTrigger>
