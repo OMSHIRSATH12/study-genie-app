@@ -57,6 +57,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 import { Pie, PieChart, Sector } from 'recharts';
+import React from 'react';
 
 type Quiz = GenerateQuizOutput['quizQuestions'][0];
 type Flashcard = GenerateFlashcardsOutput['flashcards'][0];
@@ -195,7 +196,7 @@ export default function Home() {
             <TabsTrigger value="flashcards" disabled={!isGenerated}>Flashcards</TabsTrigger>
             <TabsTrigger value="quiz" disabled={!isGenerated}>Quiz</TabsTrigger>
             <TabsTrigger value="resources" disabled={!isGenerated}>Resources</TabsTrigger>
-            <TabsTrigger value="profile" disabled={!isGenerated}>Profile</TabsTrigger>
+            <TabsTrigger value="profile">Profile</TabsTrigger>
           </TabsList>
 
           <TabsContent value="home">
