@@ -9,9 +9,7 @@ import {
   Sparkles,
   HelpCircle,
   BrainCircuit,
-  LayoutDashboard,
-  GraduationCap,
-  Library,
+  BarChart2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,7 +26,6 @@ import { summarizeContent } from '@/ai/flows/summarize-content';
 import { generateQuiz, type GenerateQuizOutput } from '@/ai/flows/generate-quiz';
 import { generateFlashcards, type GenerateFlashcardsOutput } from '@/ai/flows/generate-flashcards';
 import { generateMotivationalTip } from '@/ai/flows/generate-motivational-tip';
-import { Progress } from '@/components/ui/progress';
 import {
   Carousel,
   CarouselContent,
@@ -78,6 +75,8 @@ export default function Home() {
   // Motivation State
   const [studyHabit, setStudyHabit] = useState('');
   const [motivationalTip, setMotivationalTip] = useState('');
+  
+  const [activeTab, setActiveTab] = useState("home");
 
   const handleGenerate = async () => {
     if (!studyContent.trim()) {
@@ -111,6 +110,7 @@ export default function Home() {
       setQuiz(quizResult.quizQuestions);
       setFlashcards(flashcardsResult.flashcards);
       setIsGenerated(true);
+      setActiveTab("summary");
     } catch (error) {
       console.error(error);
       toast({
@@ -184,103 +184,86 @@ export default function Home() {
     ],
     [score, quiz.length, reviewedFlashcards.size, flashcards.length]
   );
-  
-  const [activeSection, setActiveSection] = useState('input');
-
-  const renderContent = () => {
-    if (isLoading) {
-      return (
-        <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-64">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p>Generating your study materials...</p>
-        </div>
-      );
-    }
-
-    if (!isGenerated) {
-      return (
-        <HomeTab
-          studyContent={studyContent}
-          setStudyContent={setStudyContent}
-          isLoading={isLoading}
-          handleGenerate={handleGenerate}
-        />
-      );
-    }
-
-    switch (activeSection) {
-      case 'summary':
-        return <SummaryDisplay summary={summary} isLoading={isLoading} />;
-      case 'flashcards':
-        return (
-          <FlashcardDisplay
-            flashcards={flashcards}
-            isLoading={isLoading}
-            reviewedFlashcards={reviewedFlashcards}
-            setReviewedFlashcards={setReviewedFlashcards}
-          />
-        );
-      case 'quiz':
-        return (
-          <QuizDisplay
-            quiz={quiz}
-            isLoading={isLoading}
-            currentQuestionIndex={currentQuestionIndex}
-            selectedAnswer={selectedAnswer}
-            setSelectedAnswer={setSelectedAnswer}
-            isAnswerSubmitted={isAnswerSubmitted}
-            handleQuizSubmit={handleQuizSubmit}
-            handleNextQuestion={handleNextQuestion}
-            resetQuiz={resetQuiz}
-            score={score}
-          />
-        );
-      case 'resources':
-        return (
-           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <MotivationStation
-              studyHabit={studyHabit}
-              setStudyHabit={setStudyHabit}
-              motivationalTip={motivationalTip}
-              handleGenerateTip={handleGenerateTip}
-            />
-            <Faq />
-          </div>
-        );
-      case 'progress':
-          return <ProgressTracker progressData={progressData} />
-      default:
-        return (
-          <HomeTab
-            studyContent={studyContent}
-            setStudyContent={setStudyContent}
-            isLoading={isLoading}
-            handleGenerate={handleGenerate}
-          />
-        );
-    }
-  };
-
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <header className="flex items-center justify-between gap-4 p-6 border-b">
+       <header className="flex items-center justify-between gap-4 p-6 border-b">
         <div className="flex items-center gap-4">
             <BrainCircuit className="h-8 w-8 text-primary" />
             <h1 className="text-2xl font-bold tracking-tight">StudyGenie</h1>
         </div>
-        {isGenerated && (
-            <div className="flex items-center gap-2">
-                <Button variant={activeSection === 'summary' ? 'default' : 'ghost'} onClick={() => setActiveSection('summary')}>Summary</Button>
-                <Button variant={activeSection === 'flashcards' ? 'default' : 'ghost'} onClick={() => setActiveSection('flashcards')}>Flashcards</Button>
-                <Button variant={activeSection === 'quiz' ? 'default' : 'ghost'} onClick={() => setActiveSection('quiz')}>Quiz</Button>
-                <Button variant={activeSection === 'resources' ? 'default' : 'ghost'} onClick={() => setActiveSection('resources')}>Resources</Button>
-                <Button variant={activeSection === 'progress' ? 'default' : 'ghost'} onClick={() => setActiveSection('progress')}>Progress</Button>
-            </div>
-        )}
       </header>
       <main className="flex-1 p-6">
-       {renderContent()}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 mb-6">
+            <TabsTrigger value="home" onClick={() => setActiveTab('home')}>Home</TabsTrigger>
+            <TabsTrigger value="summary" disabled={!isGenerated}>Summary</TabsTrigger>
+            <TabsTrigger value="flashcards" disabled={!isGenerated}>Flashcards</TabsTrigger>
+            <TabsTrigger value="quiz" disabled={!isGenerated}>Quiz</TabsTrigger>
+            <TabsTrigger value="resources" disabled={!isGenerated}>Resources</TabsTrigger>
+            <TabsTrigger value="progress" disabled={!isGenerated}>Progress</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="home">
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-64">
+                <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+                <p>Generating your study materials...</p>
+              </div>
+            ) : (
+               <HomeTab
+                studyContent={studyContent}
+                setStudyContent={setStudyContent}
+                isLoading={isLoading}
+                handleGenerate={handleGenerate}
+              />
+            )}
+          </TabsContent>
+
+          <TabsContent value="summary">
+            <SummaryDisplay summary={summary} isLoading={isLoading} />
+          </TabsContent>
+
+          <TabsContent value="flashcards">
+            <FlashcardDisplay
+              flashcards={flashcards}
+              isLoading={isLoading}
+              reviewedFlashcards={reviewedFlashcards}
+              setReviewedFlashcards={setReviewedFlashcards}
+            />
+          </TabsContent>
+
+          <TabsContent value="quiz">
+            <QuizDisplay
+              quiz={quiz}
+              isLoading={isLoading}
+              currentQuestionIndex={currentQuestionIndex}
+              selectedAnswer={selectedAnswer}
+              setSelectedAnswer={setSelectedAnswer}
+              isAnswerSubmitted={isAnswerSubmitted}
+              handleQuizSubmit={handleQuizSubmit}
+              handleNextQuestion={handleNextQuestion}
+              resetQuiz={resetQuiz}
+              score={score}
+            />
+          </TabsContent>
+
+          <TabsContent value="resources">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <MotivationStation
+                  studyHabit={studyHabit}
+                  setStudyHabit={setStudyHabit}
+                  motivationalTip={motivationalTip}
+                  handleGenerateTip={handleGenerateTip}
+                />
+                <Faq />
+              </div>
+          </TabsContent>
+          
+          <TabsContent value="progress">
+              <ProgressTracker progressData={progressData} />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
@@ -297,42 +280,43 @@ const HomeTab = ({
   isLoading: boolean;
   handleGenerate: () => void;
 }) => (
-  <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
-    <Card className="flex-grow flex flex-col">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-accent" />
-          <span>Start Studying</span>
-        </CardTitle>
-        <CardDescription>
-          Paste your study material below to generate a summary, quiz, and flashcards.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex-grow flex flex-col gap-4">
-        <Textarea
-          placeholder="Paste your notes, article, or any text here..."
-          className="w-full flex-grow min-h-[200px] text-base"
-          value={studyContent}
-          onChange={e => setStudyContent(e.target.value)}
-          disabled={isLoading}
-        />
-        <Button onClick={handleGenerate} disabled={isLoading} className="w-full">
-          {isLoading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Sparkles className="mr-2 h-4 w-4" />
-          )}
-          Generate
-        </Button>
-      </CardContent>
-    </Card>
-  </div>
+  <Card className="flex-grow flex flex-col">
+    <CardHeader>
+      <CardTitle className="flex items-center gap-2">
+        <Sparkles className="h-5 w-5 text-accent" />
+        <span>Start Studying</span>
+      </CardTitle>
+      <CardDescription>
+        Paste your study material below to generate a summary, quiz, and flashcards.
+      </CardDescription>
+    </CardHeader>
+    <CardContent className="flex-grow flex flex-col gap-4">
+      <Textarea
+        placeholder="Paste your notes, article, or any text here..."
+        className="w-full flex-grow min-h-[200px] text-base"
+        value={studyContent}
+        onChange={e => setStudyContent(e.target.value)}
+        disabled={isLoading}
+      />
+      <Button onClick={handleGenerate} disabled={isLoading || !studyContent.trim()} className="w-full">
+        {isLoading ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <Sparkles className="mr-2 h-4 w-4" />
+        )}
+        Generate
+      </Button>
+    </CardContent>
+  </Card>
 );
 
 const SummaryDisplay = ({ summary, isLoading }: { summary: string; isLoading: boolean }) => (
   <Card className="h-full min-h-[400px]">
     <CardHeader>
-      <CardTitle>Content Summary</CardTitle>
+      <CardTitle className="flex items-center gap-2">
+        <BookOpen className="h-5 w-5 text-primary" />
+        Content Summary
+      </CardTitle>
       <CardDescription>Key points from your study material.</CardDescription>
     </CardHeader>
     <CardContent>
@@ -391,7 +375,10 @@ const FlashcardDisplay = ({
   return (
     <Card className="h-full min-h-[400px] flex flex-col">
       <CardHeader>
-        <CardTitle>Flashcards</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <ClipboardCheck className="h-5 w-5 text-primary" />
+          Flashcards
+        </CardTitle>
         <CardDescription>Click to flip. Use arrows to navigate.</CardDescription>
       </CardHeader>
       <CardContent className="flex-grow flex items-center justify-center">
@@ -499,7 +486,10 @@ const QuizDisplay = ({
   return (
     <Card className="h-full min-h-[400px] flex flex-col">
       <CardHeader>
-        <CardTitle>Quiz Time!</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+            <HelpCircle className="h-5 w-5 text-primary" />
+            Quiz Time!
+        </CardTitle>
         <div className="flex justify-between items-center">
           <CardDescription>
             Question {currentQuestionIndex + 1} of {quiz.length}
@@ -511,20 +501,21 @@ const QuizDisplay = ({
         <p className="font-semibold text-lg">{currentQuestion.question}</p>
         <RadioGroup
           value={selectedAnswer || ''}
-          onValue-change={setSelectedAnswer}
+          onValueChange={setSelectedAnswer}
           disabled={isAnswerSubmitted}
           className="space-y-2"
         >
           {currentQuestion.options.map((option, index) => (
-            <div
+            <Label
               key={index}
-              className={cn('flex items-center space-x-3 p-3 rounded-lg border transition-all', getOptionClass(option))}
+              htmlFor={`option-${index}`}
+              className={cn('flex items-center space-x-3 p-3 rounded-lg border transition-all cursor-pointer', getOptionClass(option))}
             >
               <RadioGroupItem value={option} id={`option-${index}`} />
-              <Label htmlFor={`option-${index}`} className="text-base cursor-pointer flex-1">
+              <span className="text-base flex-1">
                 {option}
-              </Label>
-            </div>
+              </span>
+            </Label>
           ))}
         </RadioGroup>
       </CardContent>
@@ -546,7 +537,10 @@ const QuizDisplay = ({
 const ProgressTracker = ({ progressData }: { progressData: any[] }) => (
   <Card>
     <CardHeader>
-      <CardTitle>Your Progress</CardTitle>
+      <CardTitle className="flex items-center gap-2">
+        <BarChart2 className="h-5 w-5 text-primary" />
+        Your Progress
+      </CardTitle>
       <CardDescription>Complete quizzes and review flashcards to see your progress.</CardDescription>
     </CardHeader>
     <CardContent className="h-[240px] pt-2">
@@ -599,7 +593,7 @@ const MotivationStation = ({
           <SelectItem value="I prefer studying in short bursts">I prefer studying in short bursts</SelectItem>
         </SelectContent>
       </Select>
-      <Button onClick={handleGenerateTip} className="w-full" variant="outline">
+      <Button onClick={handleGenerateTip} className="w-full" variant="outline" disabled={!studyHabit}>
         Get a Tip
       </Button>
       {motivationalTip && (
@@ -644,5 +638,3 @@ const Faq = () => (
     </CardContent>
   </Card>
 );
-
-    
