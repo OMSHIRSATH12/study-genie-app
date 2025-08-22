@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   BookOpen,
   ClipboardCheck,
@@ -11,6 +12,7 @@ import {
   BrainCircuit,
   BarChart2,
   User,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -61,30 +63,65 @@ import React from 'react';
 
 type Quiz = GenerateQuizOutput['quizQuestions'][0];
 type Flashcard = GenerateFlashcardsOutput['flashcards'][0];
+type StudyTopic = {
+  id: string;
+  title: string;
+  summary: string;
+  quiz: Quiz[];
+  flashcards: Flashcard[];
+  quizProgress: number;
+  flashcardProgress: number;
+  // State for the quiz itself
+  currentQuestionIndex: number;
+  selectedAnswer: string | null;
+  isAnswerSubmitted: boolean;
+  score: number;
+  // State for flashcards
+  reviewedFlashcards: Set<number>;
+};
+
 
 export default function Home() {
   const { toast } = useToast();
   const [studyContent, setStudyContent] = useState('');
+  const [topicTitle, setTopicTitle] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isGenerated, setIsGenerated] = useState(false);
-  const [summary, setSummary] = useState('');
-  const [quiz, setQuiz] = useState<Quiz[]>([]);
-  const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
-
-  // Quiz State
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
-  const [isAnswerSubmitted, setIsAnswerSubmitted] = useState(false);
-  const [score, setScore] = useState(0);
-
-  // Flashcard State
-  const [reviewedFlashcards, setReviewedFlashcards] = useState(new Set<number>());
-
-  // Motivation State
-  const [studyHabit, setStudyHabit] = useState('');
-  const [motivationalTip, setMotivationalTip] = useState('');
-  
   const [activeTab, setActiveTab] = useState("home");
+
+  const [studyTopics, setStudyTopics] = useState<StudyTopic[]>([]);
+  const [activeTopicId, setActiveTopicId] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const savedTopics = localStorage.getItem('studyTopics');
+      if (savedTopics) {
+        setStudyTopics(JSON.parse(savedTopics));
+      }
+    } catch (error) {
+      console.error("Failed to load topics from localStorage", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('studyTopics', JSON.stringify(studyTopics));
+    } catch (error) {
+      console.error("Failed to save topics to localStorage", error);
+    }
+  }, [studyTopics]);
+
+  const activeTopic = useMemo(() => {
+    return studyTopics.find(t => t.id === activeTopicId) || null;
+  }, [studyTopics, activeTopicId]);
+
+  const updateActiveTopic = (updates: Partial<StudyTopic>) => {
+    if (!activeTopicId) return;
+    setStudyTopics(prevTopics =>
+      prevTopics.map(topic =>
+        topic.id === activeTopicId ? { ...topic, ...updates } : topic
+      )
+    );
+  };
 
   const handleGenerate = async () => {
     if (!studyContent.trim()) {
@@ -95,18 +132,15 @@ export default function Home() {
       });
       return;
     }
+    if (!topicTitle.trim()) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Please enter a title for your topic.',
+        });
+        return;
+      }
     setIsLoading(true);
-    setIsGenerated(false);
-    // Reset states
-    setSummary('');
-    setQuiz([]);
-    setFlashcards([]);
-    setCurrentQuestionIndex(0);
-    setSelectedAnswer(null);
-    setIsAnswerSubmitted(false);
-    setScore(0);
-    setReviewedFlashcards(new Set());
-    setMotivationalTip('');
 
     try {
       const [summaryResult, quizResult, flashcardsResult] = await Promise.all([
@@ -114,11 +148,26 @@ export default function Home() {
         generateQuiz({ studyContent, numberOfQuestions: 5 }),
         generateFlashcards({ studyContent, numFlashcards: 10 }),
       ]);
-      setSummary(summaryResult.summary);
-      setQuiz(quizResult.quizQuestions);
-      setFlashcards(flashcardsResult.flashcards);
-      setIsGenerated(true);
+
+      const newTopic: StudyTopic = {
+        id: new Date().toISOString(),
+        title: topicTitle,
+        summary: summaryResult.summary,
+        quiz: quizResult.quizQuestions,
+        flashcards: flashcardsResult.flashcards,
+        quizProgress: 0,
+        flashcardProgress: 0,
+        currentQuestionIndex: 0,
+        selectedAnswer: null,
+        isAnswerSubmitted: false,
+        score: 0,
+        reviewedFlashcards: new Set(),
+      };
+
+      setStudyTopics(prev => [...prev, newTopic]);
+      setActiveTopicId(newTopic.id);
       setActiveTab("summary");
+
     } catch (error) {
       console.error(error);
       toast({
@@ -132,25 +181,57 @@ export default function Home() {
   };
 
   const handleQuizSubmit = () => {
-    if (!selectedAnswer) return;
-    setIsAnswerSubmitted(true);
-    if (selectedAnswer === quiz[currentQuestionIndex].correctAnswer) {
-      setScore(prev => prev + 1);
+    if (!activeTopic || activeTopic.selectedAnswer === null) return;
+    let newScore = activeTopic.score;
+    if (activeTopic.selectedAnswer === activeTopic.quiz[activeTopic.currentQuestionIndex].correctAnswer) {
+      newScore += 1;
     }
+    const newProgress = (newScore / activeTopic.quiz.length) * 100;
+    updateActiveTopic({ isAnswerSubmitted: true, score: newScore, quizProgress: newProgress });
   };
 
   const handleNextQuestion = () => {
-    setIsAnswerSubmitted(false);
-    setSelectedAnswer(null);
-    setCurrentQuestionIndex(prev => prev + 1);
+    if (!activeTopic) return;
+    updateActiveTopic({
+        isAnswerSubmitted: false,
+        selectedAnswer: null,
+        currentQuestionIndex: activeTopic.currentQuestionIndex + 1,
+    });
   };
 
   const resetQuiz = () => {
-    setCurrentQuestionIndex(0);
-    setSelectedAnswer(null);
-    setIsAnswerSubmitted(false);
-    setScore(0);
+    updateActiveTopic({
+        currentQuestionIndex: 0,
+        selectedAnswer: null,
+        isAnswerSubmitted: false,
+        score: 0,
+        quizProgress: 0,
+    });
   };
+
+  const handleSetReviewedFlashcard = (index: number) => {
+    if (!activeTopic) return;
+    const newReviewedFlashcards = new Set(activeTopic.reviewedFlashcards).add(index);
+    const newProgress = (newReviewedFlashcards.size / activeTopic.flashcards.length) * 100;
+    updateActiveTopic({ reviewedFlashcards: newReviewedFlashcards, flashcardProgress: newProgress });
+  };
+  
+  const handleSelectTopic = (topicId: string) => {
+    setActiveTopicId(topicId);
+    setActiveTab('summary'); 
+  };
+
+  const handleDeleteTopic = (topicId: string) => {
+    setStudyTopics(prev => prev.filter(t => t.id !== topicId));
+    if (activeTopicId === topicId) {
+        setActiveTopicId(null);
+        setActiveTab('home');
+    }
+  };
+
+  // Motivation State
+  const [studyHabit, setStudyHabit] = useState('');
+  const [motivationalTip, setMotivationalTip] = useState('');
 
   const handleGenerateTip = async () => {
     if (!studyHabit) {
@@ -163,7 +244,7 @@ export default function Home() {
     }
     try {
       const result = await generateMotivationalTip({
-        progressPercentage: Math.round((score / (quiz.length || 1)) * 100),
+        progressPercentage: activeTopic?.quizProgress || 0,
         studyHabits: studyHabit,
       });
       setMotivationalTip(result.tip);
@@ -177,9 +258,6 @@ export default function Home() {
     }
   };
 
-  const quizProgress = quiz.length > 0 ? (score / quiz.length) * 100 : 0;
-  const flashcardProgress = flashcards.length > 0 ? (reviewedFlashcards.size / flashcards.length) * 100 : 0;
-
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
        <header className="flex items-center justify-between gap-4 p-6 border-b">
@@ -192,10 +270,10 @@ export default function Home() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 mb-6">
             <TabsTrigger value="home">Home</TabsTrigger>
-            <TabsTrigger value="summary" disabled={!isGenerated}>Summary</TabsTrigger>
-            <TabsTrigger value="flashcards" disabled={!isGenerated}>Flashcards</TabsTrigger>
-            <TabsTrigger value="quiz" disabled={!isGenerated}>Quiz</TabsTrigger>
-            <TabsTrigger value="resources" disabled={!isGenerated}>Resources</TabsTrigger>
+            <TabsTrigger value="summary" disabled={!activeTopic}>Summary</TabsTrigger>
+            <TabsTrigger value="flashcards" disabled={!activeTopic}>Flashcards</TabsTrigger>
+            <TabsTrigger value="quiz" disabled={!activeTopic}>Quiz</TabsTrigger>
+            <TabsTrigger value="resources" disabled={!activeTopic}>Resources</TabsTrigger>
             <TabsTrigger value="profile">Profile</TabsTrigger>
           </TabsList>
 
@@ -209,6 +287,8 @@ export default function Home() {
                <HomeTab
                 studyContent={studyContent}
                 setStudyContent={setStudyContent}
+                topicTitle={topicTitle}
+                setTopicTitle={setTopicTitle}
                 isLoading={isLoading}
                 handleGenerate={handleGenerate}
               />
@@ -216,31 +296,33 @@ export default function Home() {
           </TabsContent>
 
           <TabsContent value="summary">
-            <SummaryDisplay summary={summary} isLoading={isLoading} />
+            <SummaryDisplay summary={activeTopic?.summary || ''} isLoading={isLoading} />
           </TabsContent>
 
           <TabsContent value="flashcards">
             <FlashcardDisplay
-              flashcards={flashcards}
+              flashcards={activeTopic?.flashcards || []}
               isLoading={isLoading}
-              reviewedFlashcards={reviewedFlashcards}
-              setReviewedFlashcards={setReviewedFlashcards}
+              onReviewed={handleSetReviewedFlashcard}
             />
           </TabsContent>
 
           <TabsContent value="quiz">
-            <QuizDisplay
-              quiz={quiz}
-              isLoading={isLoading}
-              currentQuestionIndex={currentQuestionIndex}
-              selectedAnswer={selectedAnswer}
-              setSelectedAnswer={setSelectedAnswer}
-              isAnswerSubmitted={isAnswerSubmitted}
-              handleQuizSubmit={handleQuizSubmit}
-              handleNextQuestion={handleNextQuestion}
-              resetQuiz={resetQuiz}
-              score={score}
-            />
+            {activeTopic && (
+                <QuizDisplay
+                    key={activeTopic.id}
+                    quiz={activeTopic.quiz}
+                    isLoading={isLoading}
+                    currentQuestionIndex={activeTopic.currentQuestionIndex}
+                    selectedAnswer={activeTopic.selectedAnswer}
+                    setSelectedAnswer={(answer) => updateActiveTopic({ selectedAnswer: answer })}
+                    isAnswerSubmitted={activeTopic.isAnswerSubmitted}
+                    handleQuizSubmit={handleQuizSubmit}
+                    handleNextQuestion={handleNextQuestion}
+                    resetQuiz={resetQuiz}
+                    score={activeTopic.score}
+                />
+            )}
           </TabsContent>
 
           <TabsContent value="resources">
@@ -257,8 +339,9 @@ export default function Home() {
           
           <TabsContent value="profile">
               <ProfileTab 
-                quizProgress={quizProgress}
-                flashcardProgress={flashcardProgress}
+                studyTopics={studyTopics}
+                onSelectTopic={handleSelectTopic}
+                onDeleteTopic={handleDeleteTopic}
               />
           </TabsContent>
         </Tabs>
@@ -270,11 +353,15 @@ export default function Home() {
 const HomeTab = ({
   studyContent,
   setStudyContent,
+  topicTitle,
+  setTopicTitle,
   isLoading,
   handleGenerate
 }: {
   studyContent: string;
   setStudyContent: (value: string) => void;
+  topicTitle: string;
+  setTopicTitle: (value: string) => void;
   isLoading: boolean;
   handleGenerate: () => void;
 }) => (
@@ -285,10 +372,17 @@ const HomeTab = ({
         <span>Start Studying</span>
       </CardTitle>
       <CardDescription>
-        Paste your study material below to generate a summary, quiz, and flashcards.
+        Give your study session a title, then paste your material below to generate a summary, quiz, and flashcards.
       </CardDescription>
     </CardHeader>
     <CardContent className="flex-grow flex flex-col gap-4">
+    <Textarea
+        placeholder="Enter a title for your topic..."
+        className="w-full text-base"
+        value={topicTitle}
+        onChange={e => setTopicTitle(e.target.value)}
+        disabled={isLoading}
+      />
       <Textarea
         placeholder="Paste your notes, article, or any text here..."
         className="w-full flex-grow min-h-[200px] text-base"
@@ -296,7 +390,7 @@ const HomeTab = ({
         onChange={e => setStudyContent(e.target.value)}
         disabled={isLoading}
       />
-      <Button onClick={handleGenerate} disabled={isLoading || !studyContent.trim()} className="w-full">
+      <Button onClick={handleGenerate} disabled={isLoading || !studyContent.trim() || !topicTitle.trim()} className="w-full">
         {isLoading ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         ) : (
@@ -339,13 +433,11 @@ const SummaryDisplay = ({ summary, isLoading }: { summary: string; isLoading: bo
 const FlashcardDisplay = ({
   flashcards,
   isLoading,
-  reviewedFlashcards,
-  setReviewedFlashcards,
+  onReviewed,
 }: {
   flashcards: Flashcard[];
   isLoading: boolean;
-  reviewedFlashcards: Set<number>;
-  setReviewedFlashcards: React.Dispatch<React.SetStateAction<Set<number>>>;
+  onReviewed: (index: number) => void;
 }) => {
   const [flippedStates, setFlippedStates] = useState<Record<number, boolean>>({});
 
@@ -367,7 +459,7 @@ const FlashcardDisplay = ({
 
   const handleFlip = (index: number) => {
     setFlippedStates(prev => ({ ...prev, [index]: !prev[index] }));
-    setReviewedFlashcards(prev => new Set(prev).add(index));
+    onReviewed(index);
   };
 
   return (
@@ -532,21 +624,52 @@ const QuizDisplay = ({
   );
 };
 
-const ProfileTab = ({ quizProgress, flashcardProgress }: { quizProgress: number, flashcardProgress: number }) => (
-  <Card>
-    <CardHeader>
-      <CardTitle className="flex items-center gap-2">
-        <User className="h-5 w-5 text-primary" />
-        Your Profile
-      </CardTitle>
-      <CardDescription>A summary of your study progress.</CardDescription>
-    </CardHeader>
-    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-      <ProgressCircle title="Quiz Progress" value={quizProgress} />
-      <ProgressCircle title="Flashcards Reviewed" value={flashcardProgress} />
-    </CardContent>
-  </Card>
-);
+const ProfileTab = ({ 
+    studyTopics,
+    onSelectTopic,
+    onDeleteTopic,
+  }: { 
+    studyTopics: StudyTopic[];
+    onSelectTopic: (topicId: string) => void;
+    onDeleteTopic: (topicId: string) => void;
+  }) => (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <User className="h-5 w-5 text-primary" />
+          Your Profile
+        </CardTitle>
+        <CardDescription>A summary of your study progress across all topics.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {studyTopics.length === 0 ? (
+            <p className="text-muted-foreground text-center">You haven't studied any topics yet. Go to the Home tab to get started!</p>
+        ) : (
+            studyTopics.map(topic => (
+                <Card key={topic.id} className="p-4">
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <CardTitle className="text-xl mb-2">{topic.title}</CardTitle>
+                            <div className="flex gap-4">
+                                <Button size="sm" onClick={() => onSelectTopic(topic.id)}>
+                                    View Topic
+                                </Button>
+                                <Button size="sm" variant="destructive" onClick={() => onDeleteTopic(topic.id)}>
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 items-center w-1/2">
+                            <ProgressCircle title="Quiz Progress" value={topic.quizProgress} />
+                            <ProgressCircle title="Flashcards Reviewed" value={topic.flashcardProgress} />
+                        </div>
+                    </div>
+                </Card>
+            ))
+        )}
+      </CardContent>
+    </Card>
+  );
 
 const chartConfig = {
   progress: {
@@ -557,15 +680,13 @@ const chartConfig = {
 
 const ProgressCircle = ({ title, value }: { title: string, value: number }) => {
   const chartData = [{ name: 'progress', value, fill: 'var(--color-progress)' }];
-  const [active, setActive] = React.useState(0);
-  const activeData = chartData[active]
 
   return (
-    <Card className="flex flex-col items-center justify-center p-6">
-       <CardTitle className="mb-4">{title}</CardTitle>
+    <div className="flex flex-col items-center justify-center p-2">
+       <h3 className="text-sm font-medium mb-2">{title}</h3>
         <ChartContainer
           config={chartConfig}
-          className="mx-auto aspect-square h-[200px]"
+          className="mx-auto aspect-square h-[100px]"
         >
           <PieChart>
             <ChartTooltip
@@ -576,12 +697,13 @@ const ProgressCircle = ({ title, value }: { title: string, value: number }) => {
               data={chartData}
               dataKey="value"
               nameKey="name"
-              innerRadius={60}
-              strokeWidth={5}
+              innerRadius={30}
+              outerRadius={40}
+              strokeWidth={2}
               activeIndex={0}
               activeShape={({ outerRadius = 0, ...props }) => (
                 <g>
-                  <Sector {...props} outerRadius={outerRadius + 10} />
+                  <Sector {...props} outerRadius={outerRadius + 4} />
                   <Sector {...props} outerRadius={outerRadius} cornerRadius={5} />
                 </g>
               )}
@@ -592,13 +714,13 @@ const ProgressCircle = ({ title, value }: { title: string, value: number }) => {
               y="50%"
               textAnchor="middle"
               dominantBaseline="middle"
-              className="fill-foreground text-3xl font-bold"
+              className="fill-foreground text-xl font-bold"
             >
               {`${Math.round(value)}%`}
             </text>
           </PieChart>
         </ChartContainer>
-    </Card>
+    </div>
   )
 }
 
