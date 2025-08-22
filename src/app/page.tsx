@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import {
   BookOpen,
   ClipboardCheck,
@@ -13,6 +13,7 @@ import {
   BarChart2,
   User,
   Trash2,
+  Paperclip,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,6 +24,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { summarizeContent } from '@/ai/flows/summarize-content';
@@ -364,43 +366,89 @@ const HomeTab = ({
   setTopicTitle: (value: string) => void;
   isLoading: boolean;
   handleGenerate: () => void;
-}) => (
-  <Card className="flex-grow flex flex-col">
-    <CardHeader>
-      <CardTitle className="flex items-center gap-2">
-        <Sparkles className="h-5 w-5 text-accent" />
-        <span>Start Studying</span>
-      </CardTitle>
-      <CardDescription>
-        Give your study session a title, then paste your material below to generate a summary, quiz, and flashcards.
-      </CardDescription>
-    </CardHeader>
-    <CardContent className="flex-grow flex flex-col gap-4">
-    <Textarea
-        placeholder="Enter a title for your topic..."
-        className="w-full text-base"
-        value={topicTitle}
-        onChange={e => setTopicTitle(e.target.value)}
-        disabled={isLoading}
-      />
-      <Textarea
-        placeholder="Paste your notes, article, or any text here..."
-        className="w-full flex-grow min-h-[200px] text-base"
-        value={studyContent}
-        onChange={e => setStudyContent(e.target.value)}
-        disabled={isLoading}
-      />
-      <Button onClick={handleGenerate} disabled={isLoading || !studyContent.trim() || !topicTitle.trim()} className="w-full">
-        {isLoading ? (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        ) : (
-          <Sparkles className="mr-2 h-4 w-4" />
-        )}
-        Generate
-      </Button>
-    </CardContent>
-  </Card>
-);
+}) => {
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [fileName, setFileName] = useState('');
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+          setFileName(file.name);
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const text = e.target?.result as string;
+            setStudyContent(text);
+          };
+          reader.readAsText(file);
+        }
+      };
+    
+      const handlePaste = (event: React.ClipboardEvent<HTMLInputElement>) => {
+        const pastedText = event.clipboardData.getData('text');
+        setStudyContent(pastedText);
+      };
+
+    return (
+        <Card className="flex-grow flex flex-col">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-accent" />
+                    <span>Start Studying</span>
+                </CardTitle>
+                <CardDescription>
+                    Give your study session a title, then paste your material, or upload a file.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="flex-grow flex flex-col gap-4">
+                <Input
+                    placeholder="Enter a title for your topic..."
+                    className="w-full text-base"
+                    value={topicTitle}
+                    onChange={e => setTopicTitle(e.target.value)}
+                    disabled={isLoading}
+                />
+                <div className="relative">
+                    <Input
+                        placeholder="Paste your content or upload a file..."
+                        className="w-full text-base pr-12"
+                        value={studyContent || fileName}
+                        onPaste={handlePaste}
+                        onChange={(e) => {
+                            if (!fileName) {
+                                setStudyContent(e.target.value);
+                            }
+                        }}
+                        disabled={isLoading}
+                    />
+                     <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        className="hidden"
+                        accept=".txt,.md"
+                    />
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-1/2 right-2 -translate-y-1/2"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isLoading}
+                    >
+                        <Paperclip className="h-5 w-5" />
+                    </Button>
+                </div>
+                <Button onClick={handleGenerate} disabled={isLoading || !studyContent.trim() || !topicTitle.trim()} className="w-full">
+                    {isLoading ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                        <Sparkles className="mr-2 h-4 w-4" />
+                    )}
+                    Generate
+                </Button>
+            </CardContent>
+        </Card>
+    );
+}
 
 const SummaryDisplay = ({ summary, isLoading }: { summary: string; isLoading: boolean }) => (
   <Card className="h-full min-h-[400px]">
