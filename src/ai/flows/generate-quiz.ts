@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Generates multiple-choice quiz questions from study materials.
@@ -13,7 +14,7 @@ import {z} from 'genkit';
 const GenerateQuizInputSchema = z.object({
   studyContent: z
     .string()
-    .describe('The study material to generate quiz questions from.'),
+    .describe('The study material to generate quiz questions from. This could be a block of text or just a topic title.'),
   numberOfQuestions: z
     .number()
     .default(5)
@@ -40,7 +41,12 @@ const prompt = ai.definePrompt({
   name: 'generateQuizPrompt',
   input: {schema: GenerateQuizInputSchema},
   output: {schema: GenerateQuizOutputSchema},
-  prompt: `You are an expert educator. Your task is to generate multiple-choice quiz questions based on the study content provided.  Each question should have 4 possible answers, with one correct answer.
+  prompt: `You are an expert educator. Your task is to generate multiple-choice quiz questions.
+  
+  A user has provided the following content. It might be a full text or just a topic title.
+  If it is just a topic title, first generate a comprehensive overview of the topic to use as the basis for the quiz.
+  
+  Based on the content (either provided or generated), create multiple-choice quiz questions. Each question should have 4 possible answers, with one correct answer.
 
 Study Content: {{{studyContent}}}
 
@@ -61,3 +67,5 @@ const generateQuizFlow = ai.defineFlow(
     return output!;
   }
 );
+
+    

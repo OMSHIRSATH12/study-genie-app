@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -12,7 +13,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const SummarizeContentInputSchema = z.object({
-  content: z.string().describe('The study content to be summarized.'),
+  content: z.string().describe('The study content to be summarized. This can be a block of text or just a topic title.'),
 });
 export type SummarizeContentInput = z.infer<typeof SummarizeContentInputSchema>;
 
@@ -30,7 +31,15 @@ const summarizeContentPrompt = ai.definePrompt({
   name: 'summarizeContentPrompt',
   input: {schema: SummarizeContentInputSchema},
   output: {schema: SummarizeContentOutputSchema},
-  prompt: `Summarize the following study content, highlighting the key concepts:\n\n{{content}}`,
+  prompt: `You are an expert educator.
+  
+  A user has provided the following content. It might be a full text or just a topic title.
+  If it is just a topic title, first generate a comprehensive overview of the topic.
+  Then, summarize the content (either the provided text or the generated overview), highlighting the key concepts.
+
+  Content:
+  {{{content}}}
+  `,
 });
 
 const summarizeContentFlow = ai.defineFlow(
@@ -47,3 +56,5 @@ const summarizeContentFlow = ai.defineFlow(
     };
   }
 );
+
+    

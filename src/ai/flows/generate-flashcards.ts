@@ -1,3 +1,4 @@
+
 // src/ai/flows/generate-flashcards.ts
 'use server';
 
@@ -15,7 +16,7 @@ import {z} from 'genkit';
 const GenerateFlashcardsInputSchema = z.object({
   studyContent: z
     .string()
-    .describe('The study content to generate flashcards from.'),
+    .describe('The study content to generate flashcards from. This could be a block of text or just a topic title.'),
   numFlashcards: z.number().default(5).describe('The number of flashcards to generate.'),
 });
 export type GenerateFlashcardsInput = z.infer<typeof GenerateFlashcardsInputSchema>;
@@ -40,7 +41,10 @@ const prompt = ai.definePrompt({
   output: {schema: GenerateFlashcardsOutputSchema},
   prompt: `You are an expert educator specializing in creating effective flashcards for students.
 
-  Based on the study content provided, generate a set of flashcards to help the student actively recall information.
+  A user has provided the following content. It might be a full text or just a topic title.
+  If it is just a topic title, first generate a comprehensive overview of the topic to use as the basis for the flashcards.
+
+  Based on the content (either provided or generated), create a set of flashcards to help the student actively recall information.
 
   Study Content: {{{studyContent}}}
 
@@ -68,3 +72,4 @@ const generateFlashcardsFlow = ai.defineFlow(
   }
 );
 
+    

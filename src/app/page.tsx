@@ -23,7 +23,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
@@ -126,14 +125,6 @@ export default function Home() {
   };
 
   const handleGenerate = async () => {
-    if (!studyContent.trim()) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Please enter some study content.',
-      });
-      return;
-    }
     if (!topicTitle.trim()) {
         toast({
           variant: 'destructive',
@@ -145,10 +136,13 @@ export default function Home() {
     setIsLoading(true);
 
     try {
+      // If there's no study content, use the title to generate content.
+      const contentToProcess = studyContent.trim() || topicTitle;
+
       const [summaryResult, quizResult, flashcardsResult] = await Promise.all([
-        summarizeContent({ content: studyContent }),
-        generateQuiz({ studyContent, numberOfQuestions: 5 }),
-        generateFlashcards({ studyContent, numFlashcards: 10 }),
+        summarizeContent({ content: contentToProcess }),
+        generateQuiz({ studyContent: contentToProcess, numberOfQuestions: 5 }),
+        generateFlashcards({ studyContent: contentToProcess, numFlashcards: 10 }),
       ]);
 
       const newTopic: StudyTopic = {
@@ -169,6 +163,8 @@ export default function Home() {
       setStudyTopics(prev => [...prev, newTopic]);
       setActiveTopicId(newTopic.id);
       setActiveTab("summary");
+      setStudyContent('');
+      setTopicTitle('');
 
     } catch (error) {
       console.error(error);
@@ -188,7 +184,7 @@ export default function Home() {
     if (activeTopic.selectedAnswer === activeTopic.quiz[activeTopic.currentQuestionIndex].correctAnswer) {
       newScore += 1;
     }
-    const newProgress = (newScore / activeTopic.quiz.length) * 100;
+    const newProgress = ((activeTopic.currentQuestionIndex + 1) / activeTopic.quiz.length) * 100;
     updateActiveTopic({ isAnswerSubmitted: true, score: newScore, quizProgress: newProgress });
   };
 
@@ -284,6 +280,7 @@ export default function Home() {
               <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-64">
                 <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
                 <p>Generating your study materials...</p>
+                <p className="text-sm">This can take a moment.</p>
               </div>
             ) : (
                <HomeTab
@@ -369,11 +366,13 @@ const HomeTab = ({
 }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [fileName, setFileName] = useState('');
+    const [pastedContent, setPastedContent] = useState('');
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
           setFileName(file.name);
+          setPastedContent(''); // Clear pasted content
           const reader = new FileReader();
           reader.onload = (e) => {
             const text = e.target?.result as string;
@@ -385,6 +384,8 @@ const HomeTab = ({
     
       const handlePaste = (event: React.ClipboardEvent<HTMLInputElement>) => {
         const pastedText = event.clipboardData.getData('text');
+        setFileName(''); // Clear file name
+        setPastedContent(pastedText);
         setStudyContent(pastedText);
       };
 
@@ -396,7 +397,7 @@ const HomeTab = ({
                     <span>Start Studying</span>
                 </CardTitle>
                 <CardDescription>
-                    Give your study session a title, then paste your material, or upload a file.
+                    Give your study session a title. You can also paste your material or upload a file.
                 </CardDescription>
             </CardHeader>
             <CardContent className="flex-grow flex flex-col gap-4">
@@ -409,14 +410,14 @@ const HomeTab = ({
                 />
                 <div className="relative">
                     <Input
-                        placeholder="Paste your content or upload a file..."
+                        placeholder="Paste content, upload a file, or I'll generate it from the title!"
                         className="w-full text-base pr-12"
-                        value={studyContent || fileName}
+                        value={fileName || pastedContent}
                         onPaste={handlePaste}
                         onChange={(e) => {
-                            if (!fileName) {
-                                setStudyContent(e.target.value);
-                            }
+                            setPastedContent(e.target.value);
+                            setStudyContent(e.target.value);
+                            if (fileName) setFileName('');
                         }}
                         disabled={isLoading}
                     />
@@ -437,7 +438,7 @@ const HomeTab = ({
                         <Paperclip className="h-5 w-5" />
                     </Button>
                 </div>
-                <Button onClick={handleGenerate} disabled={isLoading || !studyContent.trim() || !topicTitle.trim()} className="w-full">
+                <Button onClick={handleGenerate} disabled={isLoading || !topicTitle.trim()} className="w-full">
                     {isLoading ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
@@ -639,7 +640,7 @@ const QuizDisplay = ({
         <p className="font-semibold text-lg">{currentQuestion.question}</p>
         <RadioGroup
           value={selectedAnswer || ''}
-          onValueValueChange={setSelectedAnswer}
+          onValueChange={setSelectedAnswer}
           disabled={isAnswerSubmitted}
           className="space-y-2"
         >
@@ -848,3 +849,5 @@ const Faq = () => (
     </CardContent>
   </Card>
 );
+
+    
