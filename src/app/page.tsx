@@ -10,6 +10,7 @@ import {
   HelpCircle,
   BrainCircuit,
   BarChart2,
+  User,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -49,7 +50,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart"
+import { Pie, PieChart, Sector } from 'recharts';
 
 type Quiz = GenerateQuizOutput['quizQuestions'][0];
 type Flashcard = GenerateFlashcardsOutput['flashcards'][0];
@@ -169,21 +176,8 @@ export default function Home() {
     }
   };
 
-  const progressData = useMemo(
-    () => [
-      {
-        name: 'Quiz',
-        value: quiz.length > 0 ? (score / quiz.length) * 100 : 0,
-        fill: 'hsl(var(--primary))',
-      },
-      {
-        name: 'Flashcards',
-        value: flashcards.length > 0 ? (reviewedFlashcards.size / flashcards.length) * 100 : 0,
-        fill: 'hsl(var(--accent))',
-      },
-    ],
-    [score, quiz.length, reviewedFlashcards.size, flashcards.length]
-  );
+  const quizProgress = quiz.length > 0 ? (score / quiz.length) * 100 : 0;
+  const flashcardProgress = flashcards.length > 0 ? (reviewedFlashcards.size / flashcards.length) * 100 : 0;
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -201,7 +195,7 @@ export default function Home() {
             <TabsTrigger value="flashcards" disabled={!isGenerated}>Flashcards</TabsTrigger>
             <TabsTrigger value="quiz" disabled={!isGenerated}>Quiz</TabsTrigger>
             <TabsTrigger value="resources" disabled={!isGenerated}>Resources</TabsTrigger>
-            <TabsTrigger value="progress" disabled={!isGenerated}>Progress</TabsTrigger>
+            <TabsTrigger value="profile" disabled={!isGenerated}>Profile</TabsTrigger>
           </TabsList>
 
           <TabsContent value="home">
@@ -260,8 +254,11 @@ export default function Home() {
               </div>
           </TabsContent>
           
-          <TabsContent value="progress">
-              <ProgressTracker progressData={progressData} />
+          <TabsContent value="profile">
+              <ProfileTab 
+                quizProgress={quizProgress}
+                flashcardProgress={flashcardProgress}
+              />
           </TabsContent>
         </Tabs>
       </main>
@@ -501,7 +498,7 @@ const QuizDisplay = ({
         <p className="font-semibold text-lg">{currentQuestion.question}</p>
         <RadioGroup
           value={selectedAnswer || ''}
-          onValueChange={setSelectedAnswer}
+          onValueValueChange={setSelectedAnswer}
           disabled={isAnswerSubmitted}
           className="space-y-2"
         >
@@ -534,33 +531,75 @@ const QuizDisplay = ({
   );
 };
 
-const ProgressTracker = ({ progressData }: { progressData: any[] }) => (
+const ProfileTab = ({ quizProgress, flashcardProgress }: { quizProgress: number, flashcardProgress: number }) => (
   <Card>
     <CardHeader>
       <CardTitle className="flex items-center gap-2">
-        <BarChart2 className="h-5 w-5 text-primary" />
-        Your Progress
+        <User className="h-5 w-5 text-primary" />
+        Your Profile
       </CardTitle>
-      <CardDescription>Complete quizzes and review flashcards to see your progress.</CardDescription>
+      <CardDescription>A summary of your study progress.</CardDescription>
     </CardHeader>
-    <CardContent className="h-[240px] pt-2">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={progressData} layout="vertical" margin={{ left: 10, right: 40 }}>
-          <XAxis type="number" domain={[0, 100]} hide />
-          <YAxis
-            type="category"
-            dataKey="name"
-            axisLine={false}
-            tickLine={false}
-            width={80}
-            tick={{ fill: 'hsl(var(--muted-foreground))' }}
-          />
-          <Bar dataKey="value" radius={[0, 4, 4, 0]} label={{ position: 'right', fill: 'hsl(var(--foreground))', formatter: (v: number) => `${Math.round(v)}%` }} barSize={35} />
-        </BarChart>
-      </ResponsiveContainer>
+    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+      <ProgressCircle title="Quiz Progress" value={quizProgress} />
+      <ProgressCircle title="Flashcards Reviewed" value={flashcardProgress} />
     </CardContent>
   </Card>
 );
+
+const chartConfig = {
+  progress: {
+    label: "Progress",
+    color: "hsl(var(--chart-1))",
+  },
+} satisfies ChartConfig
+
+const ProgressCircle = ({ title, value }: { title: string, value: number }) => {
+  const chartData = [{ name: 'progress', value, fill: 'var(--color-progress)' }];
+  const [active, setActive] = React.useState(0);
+  const activeData = chartData[active]
+
+  return (
+    <Card className="flex flex-col items-center justify-center p-6">
+       <CardTitle className="mb-4">{title}</CardTitle>
+        <ChartContainer
+          config={chartConfig}
+          className="mx-auto aspect-square h-[200px]"
+        >
+          <PieChart>
+            <ChartTooltip
+              cursor={false}
+              content={<ChartTooltipContent hideLabel hideIndicator />}
+            />
+            <Pie
+              data={chartData}
+              dataKey="value"
+              nameKey="name"
+              innerRadius={60}
+              strokeWidth={5}
+              activeIndex={0}
+              activeShape={({ outerRadius = 0, ...props }) => (
+                <g>
+                  <Sector {...props} outerRadius={outerRadius + 10} />
+                  <Sector {...props} outerRadius={outerRadius} cornerRadius={5} />
+                </g>
+              )}
+            >
+            </Pie>
+             <text
+              x="50%"
+              y="50%"
+              textAnchor="middle"
+              dominantBaseline="middle"
+              className="fill-foreground text-3xl font-bold"
+            >
+              {`${Math.round(value)}%`}
+            </text>
+          </PieChart>
+        </ChartContainer>
+    </Card>
+  )
+}
 
 const MotivationStation = ({
   studyHabit,

@@ -8,11 +8,16 @@ import { cn } from "@/lib/utils"
 
 const RadioGroup = React.forwardRef<
   React.ElementRef<typeof RadioGroupPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Root>
->(({ className, ...props }, ref) => {
+  Omit<React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Root>, "onValueChange"> & { onValueChange?: (value: string) => void, onValueValueChange?: (value: string) => void}
+>(({ className, onValueChange, onValueValueChange, ...props }, ref) => {
+  const handleChange = (value: string) => {
+    if (onValueChange) onValueChange(value);
+    if (onValueValueChange) onValueValueChange(value);
+  }
   return (
     <RadioGroupPrimitive.Root
       className={cn("grid gap-2", className)}
+      onValueChange={handleChange}
       {...props}
       ref={ref}
     />
